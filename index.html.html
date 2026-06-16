@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Gerencial — Grupo Bonobo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#111;min-height:100vh}
+
+.top-bar{background:#111;color:#fff;padding:14px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo-wrap{display:flex;flex-direction:column;line-height:1}
+.logo-grupo{font-size:10px;letter-spacing:0.18em;font-weight:300;color:rgba(255,255,255,0.5);text-transform:uppercase}
+.logo-name{font-size:18px;letter-spacing:0.12em;font-weight:700;color:#fff;text-transform:uppercase}
+.top-right{display:flex;align-items:center;gap:20px}
+.top-meta{font-size:11px;color:rgba(255,255,255,0.45);text-align:right}
+.top-meta strong{display:block;font-size:13px;color:rgba(255,255,255,0.85);font-weight:500}
+
+.main{max-width:1100px;margin:0 auto;padding:24px}
+
+.controls{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.unit-tabs{display:flex;border:1px solid #ddd;border-radius:7px;overflow:hidden}
+.unit-tab{padding:7px 18px;font-size:12px;cursor:pointer;border:none;background:#fff;color:#666;font-weight:400;transition:all 0.15s;font-family:inherit}
+.unit-tab:not(:last-child){border-right:1px solid #ddd}
+.unit-tab.active{background:#111;color:#fff;font-weight:500}
+.unit-tab:hover:not(.active){background:#f5f5f5}
+.week-nav{display:flex;align-items:center;gap:8px;margin-left:auto}
+.week-nav button{width:32px;height:32px;border:1px solid #ddd;border-radius:7px;background:#fff;cursor:pointer;font-size:18px;color:#111;display:flex;align-items:center;justify-content:center}
+.week-nav button:hover{background:#f0f0f0}
+.week-label{font-size:13px;font-weight:600;min-width:54px;text-align:center;color:#111}
+
+.status-bar{background:#fff;border:1px solid #e5e5e5;border-radius:8px;padding:9px 14px;margin-bottom:20px;font-size:11px;color:#888;display:flex;align-items:center;gap:8px}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;flex-shrink:0}
+.status-dot.loading{background:#f59e0b;animation:pulse 1s infinite}
+.status-dot.error{background:#ef4444}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+.section-label{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#999;margin-bottom:10px;margin-top:4px;font-weight:500}
+
+.acum-box{background:#111;border-radius:10px;padding:18px 20px;margin-bottom:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.acum-label{font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:rgba(255,255,255,0.45);margin-bottom:6px}
+.acum-value{font-size:22px;font-weight:600;color:#fff;line-height:1}
+.acum-sub{font-size:11px;color:rgba(255,255,255,0.45);margin-top:5px}
+.acum-bar-wrap{height:3px;background:rgba(255,255,255,0.15);border-radius:2px;margin-top:8px}
+.acum-bar{height:3px;border-radius:2px;background:#fff;transition:width 0.5s}
+
+.alerts-box{margin-bottom:20px;display:flex;flex-direction:column;gap:6px}
+.alert-item{display:flex;align-items:flex-start;gap:10px;background:#fff;border:1px solid #e5e5e5;border-radius:8px;padding:10px 14px;font-size:12px;color:#444;border-left:3px solid #e5e5e5}
+.alert-item.alert-red{border-left-color:#dc2626;background:#fff8f8}
+.alert-item.alert-yellow{border-left-color:#d97706;background:#fffbf0}
+.alert-item.alert-green{border-left-color:#16a34a;background:#f0fdf4}
+.alert-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:2px}
+.alert-red .alert-dot{background:#dc2626}
+.alert-yellow .alert-dot{background:#d97706}
+.alert-green .alert-dot{background:#16a34a}
+
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.m-card{background:#fff;border:1px solid #e5e5e5;border-radius:8px;padding:14px 16px}
+.m-label{font-size:10px;color:#999;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;line-height:1.3}
+.m-value{font-size:22px;font-weight:600;color:#111;line-height:1}
+.m-sub{font-size:11px;margin-top:6px;color:#999}
+.m-bar-wrap{margin-top:8px;height:3px;background:#eee;border-radius:2px}
+.m-bar{height:3px;border-radius:2px;background:#111;transition:width 0.5s}
+.pos{color:#16a34a}.neg{color:#dc2626}.warn{color:#d97706}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.kpi-card{background:#fff;border:1px solid #e5e5e5;border-radius:8px;padding:14px 16px;display:flex;flex-direction:column}
+.kpi-card.kpi-highlight{background:#111;border-color:#111}
+.kpi-card.kpi-highlight .kpi-name{color:rgba(255,255,255,0.55)}
+.kpi-card.kpi-highlight .kpi-val{color:#fff}
+.kpi-card.kpi-highlight .kpi-ref{color:rgba(255,255,255,0.4)}
+.kpi-card.kpi-highlight .kpi-prev{color:rgba(255,255,255,0.4)}
+.kpi-card.kpi-highlight .kpi-bar-wrap{background:rgba(255,255,255,0.15)}
+.kpi-card.kpi-highlight .kpi-bar{background:#fff}
+.kpi-card.kpi-final{background:#111;border-color:#111;position:relative;cursor:pointer}
+.kpi-card.kpi-final .kpi-name{color:rgba(255,255,255,0.55)}
+.kpi-card.kpi-final .kpi-val{color:#fff;font-size:24px}
+.kpi-card.kpi-final .kpi-ref{color:rgba(255,255,255,0.4)}
+.kpi-card.kpi-final .kpi-prev{color:rgba(255,255,255,0.4)}
+.kpi-card.kpi-final .kpi-bar-wrap{background:rgba(255,255,255,0.15)}
+.kpi-card.kpi-final .kpi-bar{background:#fff}
+.kpi-final-tag{font-size:8px;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.4);margin-top:4px}
+
+.drill-link{font-size:11px;color:#666;text-decoration:underline;cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin-top:14px}
+.drill-link:hover{color:#111}
+.drill-panel{display:none;margin-top:14px;border-top:1px solid #eee;padding-top:14px}
+.drill-panel.open{display:block}
+.drill-row{display:flex;justify-content:space-between;padding:6px 0;font-size:12px;border-bottom:1px solid #f5f5f5}
+.drill-row .drill-cat{color:#888}
+.drill-row .drill-val{font-weight:600;color:#111}
+.drill-group-title{font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:#aaa;margin:14px 0 4px}
+.kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.kpi-name{font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:#999}
+.kpi-val{font-size:20px;font-weight:600;color:#111}
+.kpi-bar-wrap{height:3px;background:#eee;border-radius:2px;margin-bottom:6px}
+.kpi-bar{height:3px;border-radius:2px;background:#111}
+.kpi-foot{display:flex;justify-content:space-between;align-items:baseline;margin-top:2px}
+.kpi-ref{font-size:10px;color:#bbb}
+.kpi-prev{font-size:10px;color:#bbb;text-align:right}
+.mix-row{display:flex;height:5px;border-radius:3px;overflow:hidden;margin-bottom:6px}
+.mix-ali{background:#111}.mix-beb{background:#ccc}
+.mix-legend{display:flex;gap:14px}
+.mix-dot{width:8px;height:8px;border-radius:1px;display:inline-block;margin-right:4px;vertical-align:middle}
+
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.chart-box{background:#fff;border:1px solid #e5e5e5;border-radius:8px;padding:16px}
+.chart-title{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#999;margin-bottom:14px}
+.chart-legend-note{font-size:10px;color:#bbb;margin-top:10px;text-align:center}
+.daily-box{background:#fff;border:1px solid #e5e5e5;border-radius:8px;padding:16px;margin-bottom:20px}
+
+.table-box{background:#fff;border:1px solid #e5e5e5;border-radius:8px;padding:16px;margin-bottom:24px}
+.tbl{width:100%;font-size:11px;border-collapse:collapse;min-width:860px}
+.tbl th{font-size:9px;text-transform:uppercase;letter-spacing:0.04em;color:#bbb;text-align:right;padding:8px 8px;border-bottom:1px solid #f0f0f0;font-weight:500;white-space:nowrap}
+.tbl th:first-child{text-align:left}
+.tbl td{padding:8px 8px;text-align:right;border-bottom:1px solid #f8f8f8;color:#333}
+.tbl td:first-child{text-align:left;color:#888;font-weight:500}
+.tbl tr:hover td{background:#fafafa}
+.tbl tr.current-row td{background:#f5f5f5;color:#111;font-weight:600}
+.tbl tr.total-row td{background:#111;color:#fff;font-weight:600;border-top:2px solid #111}
+.tbl tr.total-row td:first-child{color:#fff}
+.pill{display:inline-block;padding:2px 7px;border-radius:20px;font-size:9px;font-weight:600}
+.pill-pos{background:#dcfce7;color:#16a34a}
+.pill-neg{background:#fee2e2;color:#dc2626}
+.pill-warn{background:#fef9c3;color:#ca8a04}
+.pill-white{background:rgba(255,255,255,0.15);color:#fff}
+
+.legend-box{font-size:10.5px;color:#888;line-height:1.7;margin-top:14px;padding-top:14px;border-top:1px solid #f0f0f0}
+.legend-box strong{color:#555}
+.legend-title{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#999;font-weight:600;margin-bottom:8px}
+
+.disclaimer-box{background:#fafafa;border:1px solid #eee;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:11px;color:#888;line-height:1.6}
+.disclaimer-box svg{flex-shrink:0}
+
+.motivational-box{text-align:center;padding:24px 20px;margin-bottom:16px}
+.motivational-box p{font-size:13px;color:#555;line-height:1.7;font-style:italic;max-width:520px;margin:0 auto}
+.motivational-tag{font-size:11px;font-style:normal;font-weight:600;letter-spacing:0.04em;color:#111;margin-top:10px!important}
+.motivational-thanks{font-size:11px;font-style:normal;color:#999;margin-top:14px!important}
+
+.footer{text-align:right;font-size:10px;color:#bbb;padding-top:16px;border-top:1px solid #eee}
+.no-data{text-align:center;padding:40px;color:#ccc;font-size:13px}
+
+@media(max-width:600px){
+  .top-bar{padding:12px 16px;position:relative}
+  .top-meta{display:none}
+  .main{padding:12px}
+  .controls{gap:8px;margin-bottom:14px}
+  .unit-tabs{flex:1}
+  .unit-tab{flex:1;padding:9px 8px;font-size:13px;text-align:center}
+  .week-nav{margin-left:0}
+  .week-nav button{width:38px;height:38px;font-size:20px}
+  .week-label{font-size:14px;min-width:50px}
+  .acum-box{grid-template-columns:1fr 1fr;gap:12px;padding:14px}
+  .acum-value{font-size:18px}
+  .section-label{font-size:9px;margin-top:14px}
+  .metrics-grid{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .m-card{padding:11px 12px}
+  .m-label{font-size:9px}
+  .m-value{font-size:19px}
+  .kpi-grid{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .kpi-card{padding:11px 12px}
+  .kpi-name{font-size:9px}
+  .kpi-val{font-size:17px}
+  .charts-row{grid-template-columns:1fr;gap:10px;margin-bottom:12px}
+  .chart-box,.daily-box{padding:12px;margin-bottom:12px}
+  .chart-title{font-size:9px;margin-bottom:10px}
+  .alert-item{font-size:11px;padding:9px 12px}
+  .tbl{font-size:10px;min-width:860px}
+  .tbl th{padding:6px 5px;font-size:8px}
+  .tbl td{padding:6px 5px}
+  .footer{font-size:9px;text-align:center}
+}
+@media(min-width:601px) and (max-width:900px){
+  .metrics-grid{grid-template-columns:1fr 1fr}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .charts-row{grid-template-columns:1fr}
+  .acum-box{grid-template-columns:1fr 1fr}
+  .main{padding:20px 16px}
+}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="logo-wrap">
+    <span class="logo-grupo">Grupo</span>
+    <span class="logo-name">Bonobo</span>
+  </div>
+  <div class="top-right">
+    <div class="top-meta">
+      <strong>Dashboard Gerencial — Mono Vermutería</strong>
+      Reporte semanal
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="controls">
+    <div class="unit-tabs">
+      <button class="unit-tab active" data-unit="MO">Mono Vermutería</button>
+    </div>
+    <div class="week-nav">
+      <button id="btn-prev">&#8249;</button>
+      <span class="week-label" id="week-label">S—</span>
+      <button id="btn-next">&#8250;</button>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-dot loading" id="status-dot"></div>
+    <span id="status-text">Cargando datos desde Google Sheets…</span>
+  </div>
+
+  <!-- ACUMULADO -->
+  <div class="section-label">Acumulado del año</div>
+  <div class="acum-box" id="acumulado"></div>
+
+  <!-- VENTAS SEMANA -->
+  <div class="section-label">Ventas y cumplimiento — semana actual</div>
+  <div class="metrics-grid" id="metrics">
+    <div class="m-card"><div class="m-label">Cargando…</div></div>
+    <div class="m-card"><div class="m-label">Cargando…</div></div>
+    <div class="m-card"><div class="m-label">Cargando…</div></div>
+    <div class="m-card"><div class="m-label">Cargando…</div></div>
+  </div>
+
+  <!-- KPIs RENTABILIDAD -->
+  <div class="section-label">Indicadores de rentabilidad</div>
+  <div class="kpi-grid" id="kpis"></div>
+  <div id="uo-destacada" style="margin-bottom:20px"></div>
+
+  <!-- INDICADORES OPERACIÓN -->
+  <div class="section-label">Indicadores de operación</div>
+  <div id="ops" class="metrics-grid" style="margin-bottom:8px"></div>
+  <div class="legend-box" style="margin-bottom:20px;margin-top:0;padding-top:0;border-top:none">
+    <p class="legend-title">Descripción de indicadores</p>
+    <strong>Punto de equilibrio</strong> — la venta mínima que necesita la unidad esa semana para cubrir nómina y gastos operativos, dado su costo de venta. Si la venta real supera esta cifra, la semana ya generó utilidad operativa.<br>
+    <strong>Productividad de nómina</strong> — cuántos pesos de venta genera cada peso pagado en nómina. Un número más alto significa que el equipo está siendo más eficiente con la venta que sostiene.<br>
+    <strong>Tendencia (↑ ↓ →)</strong> — compara el promedio de las últimas 4 semanas contra las 4 semanas previas. La flecha siempre indica si el indicador mejora (verde) o empeora (rojo) para el negocio, sin importar si el número sube o baja — por ejemplo, en costo de venta o nómina, una flecha verde significa que bajaron.
+  </div>
+
+  <!-- DIARIA -->
+  <div class="daily-box">
+    <div class="chart-title">Venta diaria — semana seleccionada</div>
+    <div style="position:relative;height:200px"><canvas id="chart-daily"></canvas></div>
+    <div class="chart-legend-note">▬ ▬ Línea punteada = Meta de venta del día</div>
+  </div>
+
+  <!-- SEMANALES -->
+  <div class="charts-row">
+    <div class="chart-box">
+      <div class="chart-title">Venta semanal — historial</div>
+      <div style="position:relative;height:170px"><canvas id="chart-ventas"></canvas></div>
+      <div class="chart-legend-note">▬ ▬ Línea punteada = Meta de venta semanal</div>
+    </div>
+    <div class="chart-box">
+      <div class="chart-title">% Cumplimiento de meta</div>
+      <div style="position:relative;height:170px"><canvas id="chart-meta"></canvas></div>
+      <div class="chart-legend-note">▬ ▬ Línea punteada = 100% de cumplimiento</div>
+    </div>
+  </div>
+
+  <!-- ALERTAS -->
+  <div class="section-label">Alertas de la semana</div>
+  <div class="alerts-box" id="alertas"></div>
+
+  <!-- TABLA -->
+  <div class="table-box">
+    <div class="chart-title" style="margin-bottom:12px">Historial semanal</div>
+    <p style="font-size:10px;color:#bbb;margin-bottom:8px;display:none" id="scroll-hint">← Desliza para ver más →</p>
+    <div style="overflow-x:auto">
+    <table class="tbl">
+      <thead><tr>
+        <th style="text-align:left">Sem</th>
+        <th>Venta</th>
+        <th>% Meta</th>
+        <th>Costo V $</th>
+        <th>CV %</th>
+        <th>CV Ali $</th>
+        <th>CV Ali %</th>
+        <th>CV Beb $</th>
+        <th>CV Beb %</th>
+        <th>Ut. Bruta $</th>
+        <th>UB %</th>
+        <th>Nómina $</th>
+        <th>Nóm %</th>
+        <th>Gtos Op $</th>
+        <th>GO %</th>
+        <th>Ut. Op $</th>
+        <th>UO %</th>
+      </tr></thead>
+      <tbody id="hist-body"><tr><td colspan="17" class="no-data">Cargando…</td></tr></tbody>
+    </table>
+    </div>
+    <div class="legend-box">
+      <strong>Abreviaturas:</strong> CV = Costo de Venta · CV Ali = Costo de Venta Alimentos · CV Beb = Costo de Venta Bebidas · UB = Utilidad Bruta · Nóm = Nómina · GO = Gastos Operativos · UO = Utilidad Operativa
+    </div>
+  </div>
+
+  <div class="disclaimer-box">
+    Estas cifras son pre-cierre y pueden ajustarse una vez que contabilidad concilie los gastos del periodo. La utilidad mostrada es <strong>utilidad operativa</strong>, no utilidad neta — no incluye impuestos, depreciaciones ni partidas financieras.
+  </div>
+
+  <div class="motivational-box">
+    <p>Cada número de este reporte empezó como una mesa servida, una copa preparada con cuidado, una conversación que alguien tuvo ganas de seguir teniendo en Mono.</p>
+    <p class="motivational-tag">#ElArteDelEncuentro</p>
+    <p class="motivational-thanks">Gracias por ser parte del equipo Grupo Bonobo.</p>
+  </div>
+
+  <div class="footer">Grupo Bonobo · Morelia, Mich. · Documento confidencial para uso exclusivo de gerentes</div>
+</div>
+
+<script>
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSCPb4t36cyiMXAk4F7c8yCmtdyWrqZ9iam1W3YBVoFWryjFzNl27yRpUh4vZ2TcQeXbgP46JjqiJ2J/pub?gid=849207791&single=true&output=csv';
+
+let allRows = [];
+let currentUnit = 'MO';
+let currentWeek = 1;
+let chartVentas, chartMeta, chartDaily;
+
+const PL_MONO = {
+  costoV:   [5125,20721,19599,13511,22400,22520,11832,16130,18485,17545,10860,18258,85285,9488,8577,27921,17654,31928,20753,8956,16561,42808,18327],
+  utilBruta:[46615,32943,25069,47445,28602,21249,44763,43840,21399,40848,47262,23932,99231,58289,71055,35511,47593,65441,32548,51516,46237,13559,37440],
+  nomina:   [13973,14789,14394,14262,14266,13913,14788,13390,15444,14869,14797,15147,27534,14004,14524,12959,11918,19574,12479,13874,13420,14063,14281],
+  gtosOp:   [7500,7500,7672,7500,8977,7500,8087,16393,10928,7500,7500,7500,8152,7500,7927,7500,15731,7500,8166,7500,8111,7500,7751],
+  utilOp:   [25142,10483,1698,25096,-2057,-3592,21823,22523,-9776,17813,24353,1034,42165,29498,44732,13995,23733,30290,11752,29642,25016,-11166,5377]
+};
+
+function parseCSV(text){
+  const lines=text.trim().split('\n');
+  const headers=lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+  return lines.slice(1).map(line=>{
+    const vals=line.match(/(".*?"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g)||[];
+    const obj={};
+    headers.forEach((h,i)=>{
+      let v=(vals[i]||'').trim().replace(/^"|"$/g,'').replace(/,/g,'');
+      obj[h]=isNaN(v)||v===''?v:parseFloat(v);
+    });
+    return obj;
+  }).filter(r=>r['CDC']);
+}
+
+function getUnitRows(unit){return allRows.filter(r=>r['CDC']===unit);}
+function getWeeks(unit){
+  const rows=getUnitRows(unit);
+  return [...new Set(rows.map(r=>r['Sem']))].filter(w=>w)
+    .filter(w=>{
+      const wRows=getWeekRows(unit,w);
+      const venta=wRows.reduce((a,r)=>a+(r['Venta Total']||0),0);
+      const meta=wRows.reduce((a,r)=>a+(r['Meta ventas']||0),0);
+      return venta>0||meta>0; // incluye semanas futuras si ya tienen meta cargada
+    })
+    .sort((a,b)=>a-b);
+}
+function getWeekRows(unit,week){return getUnitRows(unit).filter(r=>r['Sem']==week);}
+function isWeekActual(unit,week){
+  const rows=getWeekRows(unit,week);
+  return rows.reduce((a,r)=>a+(r['Venta Total']||0),0)>0;
+}
+
+function fmt(n){return n==null||isNaN(n)?'—':'$'+Math.round(n).toLocaleString('es-MX');}
+function fmtN(n,d=1){return n==null||isNaN(n)?'—':(n>0?'+':'')+n.toFixed(d)+'%';}
+function pct(a,b){return b?a/b*100:null;}
+function delta(a,b){return b?((a-b)/b)*100:null;}
+function semColor(v,good,warn){if(v==null)return'';return v>=good?'pos':v>=warn?'warn':'neg';}
+function semColorLow(v,good,warn){if(v==null)return'';return v<=good?'pos':v<=warn?'warn':'neg';}
+
+// Total weeks in year (for "falta por cubrir")
+const TOTAL_WEEKS_YEAR = 52;
+
+// ── ACUMULADO ──
+function renderAcumulado(unit,week){
+  const weeks=getWeeks(unit);
+  const weeksUpTo=weeks.filter(w=>w<=week);
+  const sum=(w,k)=>getWeekRows(unit,w).reduce((a,r)=>a+(r[k]||0),0);
+
+  const ventaAcum=weeksUpTo.reduce((a,w)=>a+sum(w,'Venta Total'),0);
+  const metaAcum =weeksUpTo.reduce((a,w)=>a+sum(w,'Meta ventas'),0);
+  const metaPct  =pct(ventaAcum,metaAcum);
+  const faltaMeta=metaAcum-ventaAcum;
+
+  // Proyección de meta anual: promedio semanal de meta * semanas restantes del año
+  const metaPromedioSemanal = weeksUpTo.length ? metaAcum/weeksUpTo.length : 0;
+  const semanasRestantesAnio = Math.max(TOTAL_WEEKS_YEAR - week, 0);
+  const metaAnualProyectada = metaAcum + (metaPromedioSemanal*semanasRestantesAnio);
+  const faltaParaMetaAnual = metaAnualProyectada - ventaAcum;
+  const pctCumplAnual = pct(ventaAcum, metaAnualProyectada);
+
+  const weekIdxs=weeksUpTo.map(w=>weeks.indexOf(w)).filter(i=>i>=0&&i<PL_MONO.utilOp.length);
+  const utilOpAcum=unit==='MO'?weekIdxs.reduce((a,i)=>a+PL_MONO.utilOp[i],0):null;
+  const uoPct=pct(utilOpAcum,ventaAcum);
+
+  const metaClass=metaPct==null?'#fff':metaPct>=90?'#86efac':metaPct>=70?'#fde68a':'#fca5a5';
+  const anualClass=pctCumplAnual==null?'#fff':pctCumplAnual>=90?'#86efac':pctCumplAnual>=70?'#fde68a':'#fca5a5';
+
+  document.getElementById('acumulado').innerHTML=`
+    <div class="acum-item">
+      <div class="acum-label">Venta acumulada</div>
+      <div class="acum-value">${fmt(ventaAcum)}</div>
+      <div class="acum-sub">${weeksUpTo.length} semanas · Falta ${fmt(faltaMeta>0?faltaMeta:0)} vs meta a la fecha</div>
+      ${metaAcum?`<div class="acum-bar-wrap"><div class="acum-bar" style="width:${Math.min(pct(ventaAcum,metaAcum)||0,100)}%"></div></div>`:''}
+    </div>
+    <div class="acum-item">
+      <div class="acum-label">Meta acumulada (a la fecha)</div>
+      <div class="acum-value">${fmt(metaAcum)}</div>
+      <div class="acum-sub">S1 – S${week}</div>
+    </div>
+    <div class="acum-item">
+      <div class="acum-label">% Cumplimiento anual</div>
+      <div class="acum-value" style="color:${anualClass}">${pctCumplAnual!=null?Math.round(pctCumplAnual)+'%':'—'}</div>
+      <div class="acum-sub">Falta ${fmt(faltaParaMetaAnual>0?faltaParaMetaAnual:0)} para meta del año (52 sem.)</div>
+    </div>
+    <div class="acum-item">
+      <div class="acum-label">Utilidad op. acumulada</div>
+      <div class="acum-value" style="color:${utilOpAcum!=null?(utilOpAcum>0?'#86efac':'#fca5a5'):'#fff'}">${fmt(utilOpAcum)}</div>
+      <div class="acum-sub">${uoPct!=null?Math.round(uoPct)+'% margen':unit!=='MO'?'Sin datos P&L':''}</div>
+    </div>
+  `;
+}
+
+// ── ALERTAS ──
+function renderAlertas(unit,week){
+  const weeks=getWeeks(unit);
+  const weekIdx=weeks.indexOf(week);
+  const rows=getWeekRows(unit,week);
+  const sum=k=>rows.reduce((a,r)=>a+(r[k]||0),0);
+  const venta=sum('Venta Total');
+  const meta=sum('Meta ventas');
+
+  if(!isWeekActual(unit,week)){
+    document.getElementById('alertas').innerHTML=`
+      <div class="alert-item alert-yellow">
+        <div class="alert-dot"></div>
+        <span>S${week} todavía no tiene venta registrada — esta es la meta planeada: ${fmt(meta)}. Las alertas aparecerán automáticamente cuando la semana esté en curso.</span>
+      </div>
+    `;
+    return;
+  }
+
+  const metaPct=pct(venta,meta);
+  const prevWeek=weeks[weekIdx-1];
+  const prevV=prevWeek?getWeekRows(unit,prevWeek).reduce((a,r)=>a+(r['Venta Total']||0),0):null;
+  const vsPrev=delta(venta,prevV);
+
+  let cvPct=null,nomPct=null,uoPct=null;
+  if(unit==='MO'&&weekIdx>=0&&weekIdx<PL_MONO.costoV.length){
+    cvPct =pct(PL_MONO.costoV[weekIdx],venta||1);
+    nomPct=pct(PL_MONO.nomina[weekIdx],venta||1);
+    uoPct =pct(PL_MONO.utilOp[weekIdx],venta||1);
+  }
+
+  const alerts=[];
+  if(metaPct!=null){
+    if(metaPct>=100) alerts.push({type:'green',msg:`Venta S${week} superó la meta — ${Math.round(metaPct)}% de cumplimiento (${fmt(venta)} vs ${fmt(meta)})`});
+    else if(metaPct>=85) alerts.push({type:'yellow',msg:`Venta S${week} cerca de meta — ${Math.round(metaPct)}% de cumplimiento. Faltan ${fmt(meta-venta)} para alcanzarla`});
+    else alerts.push({type:'red',msg:`Venta S${week} por debajo de meta — solo ${Math.round(metaPct)}% (${fmt(venta)} de ${fmt(meta)})`});
+  }
+  if(vsPrev!=null){
+    if(vsPrev>10) alerts.push({type:'green',msg:`Venta sube ${vsPrev.toFixed(1)}% vs semana anterior (S${prevWeek})`});
+    else if(vsPrev<-10) alerts.push({type:'red',msg:`Venta baja ${Math.abs(vsPrev).toFixed(1)}% vs semana anterior (S${prevWeek})`});
+  }
+  if(cvPct!=null){
+    if(cvPct>35) alerts.push({type:'red',msg:`Costo de venta en ${Math.round(cvPct)}% — ${Math.round(cvPct-25)}pts por encima del objetivo (≤25%)`});
+    else if(cvPct>25) alerts.push({type:'yellow',msg:`Costo de venta en ${Math.round(cvPct)}% — ligeramente por encima del objetivo (≤25%)`});
+    else alerts.push({type:'green',msg:`Costo de venta en ${Math.round(cvPct)}% — dentro del objetivo (≤25%)`});
+  }
+  if(nomPct!=null){
+    if(nomPct>35) alerts.push({type:'red',msg:`Nómina en ${Math.round(nomPct)}% — por encima del límite (≤28%)`});
+    else if(nomPct>28) alerts.push({type:'yellow',msg:`Nómina en ${Math.round(nomPct)}% — vigilar, cerca del límite (≤28%)`});
+  }
+  if(uoPct!=null){
+    if(uoPct<0) alerts.push({type:'red',msg:`Utilidad operativa negativa esta semana — ${Math.round(uoPct)}% (${fmt(PL_MONO.utilOp[weekIdx])})`});
+    else if(uoPct<5) alerts.push({type:'yellow',msg:`Utilidad operativa baja — ${Math.round(uoPct)}%. Objetivo ≥15%`});
+    else if(uoPct>=15) alerts.push({type:'green',msg:`Utilidad operativa saludable — ${Math.round(uoPct)}% (${fmt(PL_MONO.utilOp[weekIdx])})`});
+  }
+
+  if(!alerts.length) alerts.push({type:'green',msg:'Sin alertas esta semana — todos los indicadores dentro de rango'});
+
+  document.getElementById('alertas').innerHTML=alerts.map(a=>`
+    <div class="alert-item alert-${a.type}">
+      <div class="alert-dot"></div>
+      <span>${a.msg}</span>
+    </div>
+  `).join('');
+}
+
+// ── MÉTRICAS ──
+function renderMetrics(unit,week){
+  const rows=getWeekRows(unit,week);
+  const weeks=getWeeks(unit);
+  const prevWeek=weeks[weeks.indexOf(week)-1];
+  const prevRows=prevWeek?getWeekRows(unit,prevWeek):[];
+  const sum=k=>rows.reduce((a,r)=>a+(r[k]||0),0);
+  const sumP=k=>prevRows.reduce((a,r)=>a+(r[k]||0),0);
+
+  const meta=sum('Meta ventas');
+
+  if(!isWeekActual(unit,week)){
+    const cuentasMeta=sum('Meta de cuentas');
+    const tpcMeta=rows.length?sum('Meta TPC')/rows.length:null;
+    document.getElementById('metrics').innerHTML=`
+      <div class="m-card">
+        <div class="m-label">Meta de venta planeada</div>
+        <div class="m-value">${fmt(meta)}</div>
+        <div class="m-sub">Sin venta real registrada aún</div>
+      </div>
+      <div class="m-card">
+        <div class="m-label">Meta de cuentas</div>
+        <div class="m-value">${cuentasMeta?Math.round(cuentasMeta):'—'}</div>
+        <div class="m-sub">Planeado para S${week}</div>
+      </div>
+      <div class="m-card">
+        <div class="m-label">Meta TPC</div>
+        <div class="m-value">${tpcMeta?'$'+Math.round(tpcMeta).toLocaleString('es-MX'):'—'}</div>
+        <div class="m-sub">Ticket promedio planeado</div>
+      </div>
+      <div class="m-card">
+        <div class="m-label">Estatus</div>
+        <div class="m-value" style="font-size:16px">Próxima semana</div>
+        <div class="m-sub">Vista de planeación</div>
+      </div>
+    `;
+    return;
+  }
+
+  const venta=sum('Venta Total'),prev=sumP('Venta Total');
+  const metaPct=pct(venta,meta),vsPrev=delta(venta,prev);
+  const faltaMetaSemana=meta-venta;
+  const metaClass=metaPct==null?'':metaPct>=90?'pos':metaPct>=70?'warn':'neg';
+  const prevClass=vsPrev==null?'':vsPrev>=0?'pos':'neg';
+  const faltaClass=faltaMetaSemana>0?'neg':'pos';
+
+  document.getElementById('metrics').innerHTML=`
+    <div class="m-card">
+      <div class="m-label">Venta sin impuesto</div>
+      <div class="m-value">${fmt(venta)}</div>
+      ${meta?`<div class="m-bar-wrap"><div class="m-bar" style="width:${Math.min(pct(venta,meta)||0,100)}%"></div></div>`:''}
+      <div class="m-sub">Meta: ${fmt(meta)}</div>
+    </div>
+    <div class="m-card">
+      <div class="m-label">Cumplimiento de meta ($)</div>
+      <div class="m-value ${faltaClass}">${faltaMetaSemana>0?fmt(faltaMetaSemana):fmt(Math.abs(faltaMetaSemana))}</div>
+      <div class="m-sub">${faltaMetaSemana>0?'Falta para meta':'Por encima de meta'}</div>
+    </div>
+    <div class="m-card">
+      <div class="m-label">% Cumplimiento meta</div>
+      <div class="m-value ${metaClass}">${metaPct!=null?Math.round(metaPct)+'%':'—'}</div>
+      <div class="m-sub">${metaPct!=null?(metaPct>=90?'✓ Meta alcanzada':metaPct>=70?'Cerca de meta':'Por debajo de meta'):''}</div>
+    </div>
+    <div class="m-card">
+      <div class="m-label">Vs semana anterior</div>
+      <div class="m-value ${prevClass}">${fmtN(vsPrev)}</div>
+      <div class="m-sub">S${prevWeek||'—'}: ${fmt(prev||null)}</div>
+    </div>
+  `;
+}
+
+// ── KPIs ──
+function renderKPIs(unit,week){
+  const weeks=getWeeks(unit);
+  const weekIdx=weeks.indexOf(week);
+  const prevWeek=weeks[weekIdx-1];
+  const prevIdx=weekIdx-1;
+  const rows=getWeekRows(unit,week);
+  const sum=k=>rows.reduce((a,r)=>a+(r[k]||0),0);
+  const venta=sum('Venta Total'),vtaAli=sum('Alimentos'),vtaBeb=sum('Bebidas');
+
+  if(!isWeekActual(unit,week)){
+    document.getElementById('kpis').innerHTML=`
+      <div class="kpi-card" style="grid-column:span 3">
+        <div class="kpi-top"><span class="kpi-name">Rentabilidad no disponible para semanas futuras</span></div>
+        <div class="kpi-ref">Estos indicadores dependen de venta y gastos reales. Aparecerán automáticamente cuando S${week} esté en curso.</div>
+      </div>
+    `;
+    document.getElementById('uo-destacada').innerHTML=`
+      <div class="kpi-card kpi-final">
+        <div class="kpi-top">
+          <span class="kpi-name">Utilidad operativa de la semana</span>
+          <span class="kpi-val">—</span>
+        </div>
+        <div class="kpi-foot"><span class="kpi-ref">Se calculará cuando inicie S${week}</span></div>
+      </div>
+    `;
+    return;
+  }
+
+  let cvPct=null,ubPct=null,nomPct=null,goPct=null,uoPct=null,cvAliPct=null,cvBebPct=null;
+  let cvPctPrev=null,ubPctPrev=null,nomPctPrev=null,goPctPrev=null,uoPctPrev=null,cvAliPctPrev=null,cvBebPctPrev=null;
+
+  if(unit==='MO'&&weekIdx>=0&&weekIdx<PL_MONO.costoV.length){
+    const total=vtaAli+vtaBeb||1;
+    const cv=PL_MONO.costoV[weekIdx];
+    cvPct =pct(cv,venta||1);
+    ubPct =pct(PL_MONO.utilBruta[weekIdx],venta||1);
+    nomPct=pct(PL_MONO.nomina[weekIdx],venta||1);
+    goPct =pct(PL_MONO.gtosOp[weekIdx],venta||1);
+    uoPct =pct(PL_MONO.utilOp[weekIdx],venta||1);
+    cvAliPct=pct(cv*(vtaAli/total),venta||1);
+    cvBebPct=pct(cv*(vtaBeb/total),venta||1);
+
+    if(prevIdx>=0&&prevIdx<PL_MONO.costoV.length){
+      const prevRows=getWeekRows(unit,prevWeek);
+      const sumP=k=>prevRows.reduce((a,r)=>a+(r[k]||0),0);
+      const ventaP=sumP('Venta Total'), aliP=sumP('Alimentos'), bebP=sumP('Bebidas');
+      const totalP=aliP+bebP||1;
+      const cvP=PL_MONO.costoV[prevIdx];
+      cvPctPrev =pct(cvP,ventaP||1);
+      ubPctPrev =pct(PL_MONO.utilBruta[prevIdx],ventaP||1);
+      nomPctPrev=pct(PL_MONO.nomina[prevIdx],ventaP||1);
+      goPctPrev =pct(PL_MONO.gtosOp[prevIdx],ventaP||1);
+      uoPctPrev =pct(PL_MONO.utilOp[prevIdx],ventaP||1);
+      cvAliPctPrev=pct(cvP*(aliP/totalP),ventaP||1);
+      cvBebPctPrev=pct(cvP*(bebP/totalP),ventaP||1);
+    }
+  }
+
+  // ── Tendencia a 4 semanas: compara promedio de últimas 4 semanas vs las 4 anteriores ──
+  function tendencia4Sem(getValFn){
+    if(weekIdx<7)return null; // necesitamos al menos 8 semanas de historia
+    const ultimas4=[];
+    const previas4=[];
+    for(let i=weekIdx-3;i<=weekIdx;i++) ultimas4.push(getValFn(i));
+    for(let i=weekIdx-7;i<=weekIdx-4;i++) previas4.push(getValFn(i));
+    if(ultimas4.some(v=>v==null)||previas4.some(v=>v==null))return null;
+    const avgU=ultimas4.reduce((a,b)=>a+b,0)/4;
+    const avgP=previas4.reduce((a,b)=>a+b,0)/4;
+    if(avgP===0)return null;
+    return ((avgU-avgP)/Math.abs(avgP))*100;
+  }
+  function trendIcon(delta,invert=false){
+    if(delta==null)return'';
+    const threshold=2; // cambios menores a 2% se consideran estables
+    let dir = delta>threshold?'up':delta<-threshold?'down':'flat';
+    if(invert) dir = dir==='up'?'down':dir==='down'?'up':'flat';
+    const color = dir==='up'?'#16a34a':dir==='down'?'#dc2626':'#bbb';
+    const arrow = dir==='up'?'↑':dir==='down'?'↓':'→';
+    return `<span style="color:${color};font-size:11px;margin-left:5px" title="Tendencia 4 semanas">${arrow}</span>`;
+  }
+
+  const getVentaWeek=i=>{const r=getWeekRows(unit,weeks[i]);return r.reduce((a,x)=>a+(x['Venta Total']||0),0);};
+  const getAliWeek=i=>{const r=getWeekRows(unit,weeks[i]);return r.reduce((a,x)=>a+(x['Alimentos']||0),0);};
+  const getBebWeek=i=>{const r=getWeekRows(unit,weeks[i]);return r.reduce((a,x)=>a+(x['Bebidas']||0),0);};
+  const tCV  = unit==='MO'?tendencia4Sem(i=>pct(PL_MONO.costoV[i],getVentaWeek(i)||1)):null;
+  const tCVAli = unit==='MO'?tendencia4Sem(i=>{const ali=getAliWeek(i),beb=getBebWeek(i),tot=ali+beb||1;return pct(PL_MONO.costoV[i]*(ali/tot),getVentaWeek(i)||1);}):null;
+  const tCVBeb = unit==='MO'?tendencia4Sem(i=>{const ali=getAliWeek(i),beb=getBebWeek(i),tot=ali+beb||1;return pct(PL_MONO.costoV[i]*(beb/tot),getVentaWeek(i)||1);}):null;
+  const tUB  = unit==='MO'?tendencia4Sem(i=>pct(PL_MONO.utilBruta[i],getVentaWeek(i)||1)):null;
+  const tNom = unit==='MO'?tendencia4Sem(i=>pct(PL_MONO.nomina[i],getVentaWeek(i)||1)):null;
+  const tGO  = unit==='MO'?tendencia4Sem(i=>pct(PL_MONO.gtosOp[i],getVentaWeek(i)||1)):null;
+  const tUO  = unit==='MO'?tendencia4Sem(i=>pct(PL_MONO.utilOp[i],getVentaWeek(i)||1)):null;
+  const tPE  = unit==='MO'?tendencia4Sem(i=>{const v=getVentaWeek(i);const cvR=v?PL_MONO.costoV[i]/v:null;return(cvR!=null&&cvR<1)?(PL_MONO.nomina[i]+PL_MONO.gtosOp[i])/(1-cvR):null;}):null;
+  const tProd= unit==='MO'?tendencia4Sem(i=>PL_MONO.nomina[i]?getVentaWeek(i)/PL_MONO.nomina[i]:null):null;
+
+  const kCard=(name,val,cls,barW,ref,prevVal,prevW,trend,trendInvert)=>`<div class="kpi-card">
+    <div class="kpi-top"><span class="kpi-name">${name}${trend!==undefined?trendIcon(trend,trendInvert):''}</span><span class="kpi-val ${cls}">${val!=null?Math.round(val)+'%':'—'}</span></div>
+    <div class="kpi-bar-wrap"><div class="kpi-bar" style="width:${Math.min(Math.abs(barW||0),100)}%"></div></div>
+    <div class="kpi-foot">
+      <span class="kpi-ref">${ref}</span>
+      <span class="kpi-prev">${prevVal!=null?'S'+prevW+': '+Math.round(prevVal)+'%':''}</span>
+    </div>
+  </div>`;
+
+  // ── Nuevos indicadores: punto de equilibrio, margen de contribución, productividad de nómina ──
+  let peSemanal=null,peSemanalPrev=null,margenContrib=null,margenContribPrev=null,prodNomina=null,prodNominaPrev=null;
+  if(unit==='MO'&&weekIdx>=0&&weekIdx<PL_MONO.costoV.length){
+    const cv=PL_MONO.costoV[weekIdx], nom=PL_MONO.nomina[weekIdx], go=PL_MONO.gtosOp[weekIdx];
+    const cvRatio = venta? cv/venta : null;
+    // Punto de equilibrio = gastos fijos (nómina+gastosOp) / (1 - %costo de venta)
+    peSemanal = (cvRatio!=null && cvRatio<1) ? (nom+go)/(1-cvRatio) : null;
+    margenContrib = pct(venta-cv, venta||1);
+    prodNomina = nom? venta/nom : null;
+
+    if(prevIdx>=0&&prevIdx<PL_MONO.costoV.length){
+      const prevRows=getWeekRows(unit,prevWeek);
+      const sumP=k=>prevRows.reduce((a,r)=>a+(r[k]||0),0);
+      const ventaP=sumP('Venta Total');
+      const cvP=PL_MONO.costoV[prevIdx], nomP=PL_MONO.nomina[prevIdx], goP=PL_MONO.gtosOp[prevIdx];
+      const cvRatioP = ventaP? cvP/ventaP : null;
+      peSemanalPrev = (cvRatioP!=null && cvRatioP<1) ? (nomP+goP)/(1-cvRatioP) : null;
+      margenContribPrev = pct(ventaP-cvP, ventaP||1);
+      prodNominaPrev = nomP? ventaP/nomP : null;
+    }
+  }
+
+  const kCardMoney=(name,val,ref,prevVal,prevW,trend,trendInvert)=>`<div class="kpi-card kpi-highlight">
+    <div class="kpi-top"><span class="kpi-name">${name}${trend!==undefined?trendIcon(trend,trendInvert):''}</span><span class="kpi-val">${val!=null?fmt(val):'—'}</span></div>
+    <div class="kpi-foot">
+      <span class="kpi-ref">${ref}</span>
+      <span class="kpi-prev">${prevVal!=null?'S'+prevW+': '+fmt(prevVal):''}</span>
+    </div>
+  </div>`;
+  const kCardRatio=(name,val,ref,prevVal,prevW,trend,trendInvert)=>`<div class="kpi-card kpi-highlight">
+    <div class="kpi-top"><span class="kpi-name">${name}${trend!==undefined?trendIcon(trend,trendInvert):''}</span><span class="kpi-val">${val!=null?val.toFixed(1)+'x':'—'}</span></div>
+    <div class="kpi-foot">
+      <span class="kpi-ref">${ref}</span>
+      <span class="kpi-prev">${prevVal!=null?'S'+prevW+': '+prevVal.toFixed(1)+'x':''}</span>
+    </div>
+  </div>`;
+
+  document.getElementById('kpis').innerHTML=
+    kCard('Costo de venta %',cvPct,semColorLow(cvPct,25,35),cvPct,'Ref. ≤25%',cvPctPrev,prevWeek,tCV,true)+
+    kCard('CV Alimentos %',cvAliPct,'',cvAliPct,'Sobre venta total',cvAliPctPrev,prevWeek,tCVAli,true)+
+    kCard('CV Bebidas %',cvBebPct,'',cvBebPct,'Sobre venta total',cvBebPctPrev,prevWeek,tCVBeb,true)+
+    kCard('Utilidad bruta %',ubPct,semColor(ubPct,65,55),ubPct,'Ref. ≥65%',ubPctPrev,prevWeek,tUB,false)+
+    kCard('Nómina %',nomPct,semColorLow(nomPct,28,35),nomPct,'Ref. ≤28%',nomPctPrev,prevWeek,tNom,true)+
+    kCard('Gastos operativos %',goPct,semColorLow(goPct,15,22),goPct,'Ref. ≤15%',goPctPrev,prevWeek,tGO,true)+
+    kCardMoney('Punto de equilibrio',peSemanal,'Venta mínima para cubrir gastos fijos',peSemanalPrev,prevWeek,tPE,true)+
+    kCardRatio('Productividad de nómina',prodNomina,'Venta generada por $1 de nómina · Ref. 3.5x–5x',prodNominaPrev,prevWeek,tProd,false);
+
+  // Utilidad operativa — tarjeta destacada, fuera de la grid normal
+  const uoMonto=unit==='MO'&&weekIdx>=0&&weekIdx<PL_MONO.utilOp.length?PL_MONO.utilOp[weekIdx]:null;
+  const uoMontoPrev=unit==='MO'&&prevIdx>=0&&prevIdx<PL_MONO.utilOp.length?PL_MONO.utilOp[prevIdx]:null;
+  document.getElementById('uo-destacada').innerHTML=`
+    <div class="kpi-card kpi-final" id="drill-toggle">
+      <div class="kpi-top">
+        <span class="kpi-name">Utilidad operativa de la semana${trendIcon(tUO,false)}</span>
+        <span class="kpi-val">${uoPct!=null?Math.round(uoPct)+'%':'—'}</span>
+      </div>
+      <div class="kpi-bar-wrap"><div class="kpi-bar" style="width:${Math.min(Math.abs(uoPct||0),100)}%"></div></div>
+      <div class="kpi-foot">
+        <span class="kpi-ref">${fmt(uoMonto)} · Ref. ≥15% margen</span>
+        <span class="kpi-prev">${uoPctPrev!=null?'S'+prevWeek+': '+Math.round(uoPctPrev)+'% ('+fmt(uoMontoPrev)+')':''}</span>
+      </div>
+      <div class="drill-link" id="drill-link-text">▸ Ver detalle de gastos de la semana</div>
+      <div class="drill-panel" id="drill-panel"></div>
+    </div>
+  `;
+  setupDrillDown(unit,week,weekIdx);
+}
+
+// ── OPS ──
+function renderOps(unit,week){
+  const rows=getWeekRows(unit,week);
+  const sum=k=>rows.reduce((a,r)=>a+(r[k]||0),0);
+  const venta=sum('Venta Total'),cuentas=sum('Cuentas');
+  const tpc=cuentas?venta/cuentas:null;
+  const ali=sum('Alimentos'),beb=sum('Bebidas');
+  const aliPct=pct(ali,venta),bebPct=pct(beb,venta);
+  const metaTPC=rows.length?sum('Meta TPC')/rows.length:null;
+  const metaCuentas=sum('Meta de cuentas');
+
+  document.getElementById('ops').innerHTML=`
+    <div class="m-card">
+      <div class="m-label">Número de cuentas</div>
+      <div class="m-value">${cuentas?Math.round(cuentas):'—'}</div>
+      <div class="m-sub">Meta: ${metaCuentas?Math.round(metaCuentas):'—'}</div>
+    </div>
+    <div class="m-card">
+      <div class="m-label">Ticket promedio / cuenta</div>
+      <div class="m-value">${tpc?'$'+Math.round(tpc).toLocaleString('es-MX'):'—'}</div>
+      <div class="m-sub">Meta TPC: ${metaTPC?'$'+Math.round(metaTPC).toLocaleString('es-MX'):'—'}</div>
+    </div>
+    <div class="m-card" style="grid-column:span 2">
+      <div class="m-label">Mix de venta</div>
+      <div style="display:flex;height:5px;border-radius:3px;overflow:hidden;margin:8px 0 6px">
+        <div style="background:#111;width:${aliPct!=null?Math.round(aliPct):50}%"></div>
+        <div style="background:#ccc;flex:1"></div>
+      </div>
+      <div style="display:flex;gap:20px">
+        <span style="font-size:12px;color:#888"><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:#111;margin-right:5px;vertical-align:middle"></span>Alimentos <strong style="color:#111">${aliPct!=null?Math.round(aliPct)+'%':'—'}</strong> · ${fmt(ali)}</span>
+        <span style="font-size:12px;color:#888"><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:#ccc;margin-right:5px;vertical-align:middle"></span>Bebidas <strong style="color:#111">${bebPct!=null?Math.round(bebPct)+'%':'—'}</strong> · ${fmt(beb)}</span>
+      </div>
+    </div>
+  `;
+}
+
+// ── GRÁFICAS ──
+function renderCharts(unit,week){
+  const weeks=getWeeks(unit);
+  const labels=weeks.map(w=>'S'+w);
+  const ventas=weeks.map(w=>getWeekRows(unit,w).reduce((a,r)=>a+(r['Venta Total']||0),0));
+  const metas =weeks.map(w=>getWeekRows(unit,w).reduce((a,r)=>a+(r['Meta ventas']||0),0));
+  const metaPcts=ventas.map((v,i)=>metas[i]?Math.round((v/metas[i])*100):null);
+
+  const maxVenta=Math.max(...ventas.filter(v=>v!=null));
+  const maxMetaPct=Math.max(...metaPcts.filter(v=>v!=null));
+
+  const barColors=ventas.map(v=>v===maxVenta?'#111':'rgba(17,17,17,0.15)');
+  const metaBarColors=metaPcts.map(v=>v===maxMetaPct?'#111':'rgba(17,17,17,0.15)');
+
+  if(chartVentas)chartVentas.destroy();
+  if(chartMeta)chartMeta.destroy();
+
+  chartVentas=new Chart(document.getElementById('chart-ventas'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Venta',data:ventas,backgroundColor:barColors,borderWidth:0,borderRadius:2},
+      {label:'Meta',data:metas,type:'line',borderColor:'#ccc',borderWidth:1.5,borderDash:[4,3],pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmt(ctx.raw)}}},
+      scales:{
+        x:{ticks:{font:{size:9},color:'#bbb',autoSkip:true,maxTicksLimit:14},grid:{display:false}},
+        y:{ticks:{font:{size:9},color:'#bbb',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'rgba(0,0,0,0.04)'}}
+      }
+    }
+  });
+
+  chartMeta=new Chart(document.getElementById('chart-meta'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'% Meta',data:metaPcts,backgroundColor:metaBarColors,borderWidth:0,borderRadius:2},
+      {label:'100%',data:Array(weeks.length).fill(100),type:'line',borderColor:'#ccc',borderWidth:1,borderDash:[4,3],pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.raw+'%'}}},
+      scales:{
+        x:{ticks:{font:{size:9},color:'#bbb',autoSkip:true,maxTicksLimit:14},grid:{display:false}},
+        y:{ticks:{font:{size:9},color:'#bbb',callback:v=>v+'%'},grid:{color:'rgba(0,0,0,0.04)'},min:0,max:160}
+      }
+    }
+  });
+}
+
+// ── DIARIA ──
+function renderDaily(unit,week){
+  const parseFecha=str=>{
+    if(!str)return null;
+    const parts=String(str).split('/');
+    if(parts.length===3)return new Date(+parts[2],+parts[1]-1,+parts[0]);
+    return new Date(str);
+  };
+  const rows=getWeekRows(unit,week).sort((a,b)=>parseFecha(a['Fecha'])-parseFecha(b['Fecha']));
+  if(chartDaily)chartDaily.destroy();
+  const dias=['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+  const labels=rows.map(r=>{const d=parseFecha(r['Fecha']);return d&&!isNaN(d)?dias[d.getDay()]:(r['Dia']||'—');});
+  const ventas=rows.map(r=>r['Venta Total']||0);
+  const metas =rows.map(r=>r['Meta ventas']||0);
+  const maxVentaDia=Math.max(...ventas);
+  const barColors=ventas.map(v=>v===maxVentaDia&&v>0?'#111':'rgba(17,17,17,0.35)');
+
+  chartDaily=new Chart(document.getElementById('chart-daily'),{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:'Venta',data:ventas,backgroundColor:barColors,borderWidth:0,borderRadius:3},
+      {label:'Meta',data:metas,type:'line',borderColor:'#bbb',borderWidth:1.5,borderDash:[4,3],pointRadius:3,pointBackgroundColor:'#bbb',fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>fmt(ctx.raw)}}},
+      scales:{
+        x:{ticks:{font:{size:11},color:'#666'},grid:{display:false}},
+        y:{ticks:{font:{size:9},color:'#bbb',callback:v=>'$'+(v/1000).toFixed(0)+'k'},grid:{color:'rgba(0,0,0,0.04)'}}
+      }
+    }
+  });
+}
+
+// ── TABLA ──
+function renderTable(unit,week){
+  const weeks=getWeeks(unit);
+  const tbody=document.getElementById('hist-body');
+  tbody.innerHTML='';
+
+  let totalVenta=0,totalCV=0,totalCVAli=0,totalCVBeb=0,totalUB=0,totalNom=0,totalGO=0,totalUO=0,totalMeta=0;
+
+  weeks.forEach((w,i)=>{
+    const rows=getWeekRows(unit,w);
+    const sum=(arr,k)=>arr.reduce((a,r)=>a+(r[k]||0),0);
+    const venta=sum(rows,'Venta Total');
+    const meta =sum(rows,'Meta ventas');
+    const mp   =pct(venta,meta);
+    const ali  =sum(rows,'Alimentos');
+    const beb  =sum(rows,'Bebidas');
+
+    let cv=null,ub=null,nom=null,go=null,uo=null,cvAli=null,cvBeb=null;
+    if(unit==='MO'&&i<PL_MONO.costoV.length){
+      cv =PL_MONO.costoV[i];
+      ub =PL_MONO.utilBruta[i];
+      nom=PL_MONO.nomina[i];
+      go =PL_MONO.gtosOp[i];
+      uo =PL_MONO.utilOp[i];
+      const total=ali+beb||1;
+      cvAli=cv?cv*(ali/total):null;
+      cvBeb=cv?cv*(beb/total):null;
+      totalCV+=cv||0; totalCVAli+=cvAli||0; totalCVBeb+=cvBeb||0;
+      totalUB+=ub||0; totalNom+=nom||0; totalGO+=go||0; totalUO+=uo||0;
+    }
+    totalVenta+=venta; totalMeta+=meta;
+
+    const pill=mp==null?'—':`<span class="pill ${mp>=90?'pill-pos':mp>=70?'pill-warn':'pill-neg'}">${Math.round(mp)}%</span>`;
+
+    const fd=(val,base,goodFn)=>{
+      if(val==null||!base)return'<td>—</td><td>—</td>';
+      const p=pct(val,base);
+      const cls=goodFn?goodFn(p):'';
+      return `<td>${fmt(val)}</td><td class="${cls}">${p!=null?Math.round(p)+'%':'—'}</td>`;
+    };
+
+    const tr=document.createElement('tr');
+    if(w==week)tr.classList.add('current-row');
+    tr.style.cursor='pointer';
+    tr.addEventListener('click',()=>{currentWeek=w;render();});
+    tr.innerHTML=`
+      <td>S${w}${w==week?' ●':''}</td>
+      <td>${fmt(venta)}</td>
+      <td>${pill}</td>
+      ${fd(cv,venta,p=>semColorLow(p,25,35))}
+      ${fd(cvAli,venta,null)}
+      ${fd(cvBeb,venta,null)}
+      ${fd(ub,venta,p=>semColor(p,65,55))}
+      ${fd(nom,venta,p=>semColorLow(p,28,35))}
+      ${fd(go,venta,p=>semColorLow(p,15,22))}
+      ${fd(uo,venta,p=>semColor(p,15,5))}
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const hasPL=unit==='MO';
+  const mpTotal=pct(totalVenta,totalMeta);
+  const pillTotal=mpTotal==null?'—':`<span class="pill pill-white">${Math.round(mpTotal)}%</span>`;
+
+  const fdTotal=(val,base)=>{
+    if(!hasPL||!val||!base)return'<td>—</td><td>—</td>';
+    return`<td>${fmt(val)}</td><td>${Math.round(pct(val,base))}%</td>`;
+  };
+
+  const trTotal=document.createElement('tr');
+  trTotal.classList.add('total-row');
+  trTotal.innerHTML=`
+    <td>TOTAL</td>
+    <td>${fmt(totalVenta)}</td>
+    <td>${pillTotal}</td>
+    ${fdTotal(totalCV,totalVenta)}
+    ${fdTotal(totalCVAli,totalVenta)}
+    ${fdTotal(totalCVBeb,totalVenta)}
+    ${fdTotal(totalUB,totalVenta)}
+    ${fdTotal(totalNom,totalVenta)}
+    ${fdTotal(totalGO,totalVenta)}
+    ${fdTotal(totalUO,totalVenta)}
+  `;
+  tbody.appendChild(trTotal);
+
+  const el=tbody.querySelectorAll('tr')[weeks.indexOf(week)];
+  if(el)el.scrollIntoView({block:'nearest'});
+}
+
+// Detalle de gastos por cuenta contable, por semana (Mono) — para drill-down
+const GASTOS_DETALLE_MONO = {
+  'Costo de venta':{
+    'Costo de venta alimentos':[4902,3442,2930,4792,4032,5870,4334,4298,4302,3175,2242,3393,33190,3730,4321,1925,3754,3506,2242,2653,3470,8261,4734],
+    'Costo de venta bebidas':[15852,1683,16680,8731,18388,16683,7515,11846,14214,14381,8618,14935,52351,5758,4332,25996,13900,28422,18511,6336,13091,34626,13593],
+    'Descuentos y ajustes':[0,-34,-11,-12,-19,-33,-17,-14,-30,-12,-70,-256,-76,-33,-79,0,0,0,0,0,0,0,0]
+  },
+  'Nómina':{
+    'Nómina gerencial':[2730,2730,2730,2730,2730,1092,2730,2730,2184,2730,2730,2730,2730,2730,2730,2184,2730,3510,2730,2730,2730,2730,2730],
+    'Nómina cocina':[4383,4383,4383,4383,4383,5580,4698,4383,4137,4383,4383,5145,9783,4383,4383,2205,2205,5544,2205,2205,3402,4284,4284],
+    'Nómina servicio':[2205,2205,2205,2205,2079,2205,2205,2205,2205,2394,2205,2205,2205,2205,2079,2205,2205,3623,2205,2205,2205,2520,2205],
+    'Nómina barra':[4655,4529,4529,4088,4309,4088,4529,3738,6293,4515,4578,4529,11989,4309,4088,5065,4218,6074,4218,4456,4218,3931,4218],
+    'Comida de personal':[942,546,855,765,552,626,334,624,847,901,538,826,377,658,715,560,822,596,504,392,598,843,0]
+  },
+  'Gastos operativos':{
+    'Renta':[7500,7500,7672,7500,8977,7500,8087,16393,10928,7500,7500,7500,8152,7500,7927,7500,15731,7500,8166,7500,8111,7500,7751],
+    'Artículos de limpieza':[172,390,499,461,183,652,427,455,523,468,251,908,301,277,929,444,219,501,245,166,433,0,0],
+    'Publicidad':[0,0,5500,0,5000,0,0,5000,0,0,6166,0,0,8686,0,0,0,0,0,0,0,0,0],
+    'Otros gastos generales':[150,968,680,143,143,0,57,152,710,56,400,0,0,0,0,0,0,0,0,0,0,0,0]
+  }
+};
+
+function setupDrillDown(unit,week,weekIdx){
+  const link=document.getElementById('drill-link-text');
+  const panel=document.getElementById('drill-panel');
+  if(!link||!panel)return;
+  link.onclick=(e)=>{
+    e.stopPropagation();
+    const isOpen=panel.classList.contains('open');
+    if(isOpen){
+      panel.classList.remove('open');
+      link.textContent='▸ Ver detalle de gastos de la semana';
+      return;
+    }
+    if(unit!=='MO'||weekIdx<0||weekIdx>=23){
+      panel.innerHTML='<p style="font-size:11px;color:rgba(255,255,255,0.5)">Detalle no disponible para esta unidad/semana.</p>';
+    } else {
+      const rows=getWeekRows(unit,week);
+      const ventaSemana=rows.reduce((a,r)=>a+(r['Venta Total']||0),0);
+      const ventaAli=rows.reduce((a,r)=>a+(r['Alimentos']||0),0);
+      const ventaBeb=rows.reduce((a,r)=>a+(r['Bebidas']||0),0);
+      let html='';
+      Object.keys(GASTOS_DETALLE_MONO).forEach(grupo=>{
+        html+=`<div class="drill-group-title" style="color:rgba(255,255,255,0.4)">${grupo}</div>`;
+        Object.entries(GASTOS_DETALLE_MONO[grupo]).forEach(([cuenta,vals])=>{
+          const v=vals[weekIdx]||0;
+          let base=ventaSemana;
+          if(cuenta==='Costo de venta alimentos')base=ventaAli;
+          if(cuenta==='Costo de venta bebidas')base=ventaBeb;
+          const p=base?(v/base*100):null;
+          html+=`<div class="drill-row" style="border-color:rgba(255,255,255,0.08)">
+            <span class="drill-cat" style="color:rgba(255,255,255,0.55)">${cuenta}</span>
+            <span class="drill-val" style="color:#fff">${fmt(v)} <span style="color:rgba(255,255,255,0.4);font-weight:400">(${p!=null?p.toFixed(1)+'%':'—'})</span></span>
+          </div>`;
+        });
+      });
+      html+='<p style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:10px">Detalle por cuenta contable, semana S'+week+'. % sobre venta total, salvo costo de venta de alimentos/bebidas que se compara contra su venta correspondiente. Cifras pre-cierre.</p>';
+      panel.innerHTML=html;
+    }
+    panel.classList.add('open');
+    link.textContent='▾ Ocultar detalle de gastos';
+  };
+}
+
+
+
+function updateWeekLabel(){
+  document.getElementById('week-label').textContent='S'+currentWeek;
+  const esActual=isWeekActual(currentUnit,currentWeek);
+  const existing=document.getElementById('future-badge');
+  if(existing) existing.remove();
+  if(!esActual){
+    const badge=document.createElement('span');
+    badge.id='future-badge';
+    badge.textContent='Vista de planeación';
+    badge.style.cssText='font-size:10px;background:#fef9c3;color:#92400e;padding:3px 9px;border-radius:20px;margin-left:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em';
+    document.getElementById('week-label').insertAdjacentElement('afterend',badge);
+  }
+}
+
+function render(){
+  updateWeekLabel();
+  renderAcumulado(currentUnit,currentWeek);
+  renderMetrics(currentUnit,currentWeek);
+  renderKPIs(currentUnit,currentWeek);
+  renderOps(currentUnit,currentWeek);
+  renderDaily(currentUnit,currentWeek);
+  renderCharts(currentUnit,currentWeek);
+  renderAlertas(currentUnit,currentWeek);
+  renderTable(currentUnit,currentWeek);
+}
+
+function getDefaultWeek(unit){
+  const weeks=getWeeks(unit);
+  const conVenta=weeks.filter(w=>isWeekActual(unit,w));
+  if(conVenta.length) return conVenta[conVenta.length-1];
+  return weeks.length?weeks[0]:null;
+}
+
+async function loadData(){
+  const dot=document.getElementById('status-dot');
+  const txt=document.getElementById('status-text');
+  dot.className='status-dot loading';
+  txt.textContent='Cargando datos desde Google Sheets…';
+  try{
+    const res=await fetch(CSV_URL);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const text=await res.text();
+    allRows=parseCSV(text).filter(r=>r['Año']==2026);
+    const defaultWeek=getDefaultWeek(currentUnit);
+    if(defaultWeek!=null)currentWeek=defaultWeek;
+    dot.className='status-dot';
+    const lastRow=allRows[allRows.length-1];
+    txt.textContent=`Datos actualizados · ${allRows.length} registros · Última fecha: ${lastRow?.Fecha||'—'}`;
+    if(window.innerWidth<=600)document.getElementById('scroll-hint').style.display='block';
+    render();
+  }catch(e){
+    dot.className='status-dot error';
+    txt.textContent='Error al cargar datos. Verifica que el Sheet esté publicado como CSV. ('+e.message+')';
+  }
+}
+
+document.getElementById('btn-prev').addEventListener('click',()=>{
+  const weeks=getWeeks(currentUnit);
+  const idx=weeks.indexOf(currentWeek);
+  if(idx>0){currentWeek=weeks[idx-1];render();}
+});
+document.getElementById('btn-next').addEventListener('click',()=>{
+  const weeks=getWeeks(currentUnit);
+  const idx=weeks.indexOf(currentWeek);
+  if(idx<weeks.length-1){currentWeek=weeks[idx+1];render();}
+});
+document.querySelectorAll('.unit-tab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.unit-tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentUnit=btn.dataset.unit;
+    const defaultWeek=getDefaultWeek(currentUnit);
+    if(defaultWeek!=null)currentWeek=defaultWeek;
+    render();
+  });
+});
+
+loadData();
+</script>
+</body>
+</html>
